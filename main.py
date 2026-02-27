@@ -14,7 +14,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Temporary directory for downloads
-DOWNLOAD_DIR = "temp_downloads"
+# Vercel only allows writing to /tmp
+DOWNLOAD_DIR = "/tmp" if os.getenv("VERCEL") else "temp_downloads"
 if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
 
