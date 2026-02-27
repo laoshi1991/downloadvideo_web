@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Video Downloader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h1 class="text-2xl font-bold text-center mb-6 text-gray-800">Video Downloader</h1>
+        
+        <!-- Input Section -->
+        <div class="relative mb-4">
+            <input type="text" id="urlInput" placeholder="Paste video link here..." 
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10">
+            <button id="clearBtn" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Advanced Options Toggle -->
+        <div class="mb-4">
+            <button id="advancedToggle" class="text-sm text-blue-600 hover:text-blue-800 flex items-center focus:outline-none">
+                <svg id="advancedIcon" class="w-4 h-4 mr-1 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+                Advanced Options (Cookie)
+            </button>
+            <div id="advancedSection" class="hidden mt-2">
+                <label class="block text-xs text-gray-500 mb-1">
+                    Cookie (Required for Bilibili 1080p+ or if you get errors)
+                </label>
+                <textarea id="cookieInput" rows="2" placeholder="Paste your Cookie string here (e.g. SESSDATA=...)" 
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"></textarea>
+                <p class="text-xs text-gray-400 mt-1">
+                    How to get: Login Bilibili on PC -> F12 -> Application -> Cookies -> Copy value.
+                </p>
+            </div>
+        </div>
+
+        <!-- Parse Button -->
+        <button id="parseBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 flex justify-center items-center">
+            <span>Parse Link</span>
+            <div id="loadingSpinner" class="loader ml-3 hidden"></div>
+        </button>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="mt-4 text-red-500 text-center hidden text-sm"></div>
+
+        <!-- Result Section -->
+        <div id="resultSection" class="mt-8 hidden animate-fade-in">
+            <div class="border rounded-lg overflow-hidden">
+                <img id="thumbnail" src="" alt="Video Thumbnail" class="w-full h-48 object-cover">
+                <div class="p-4">
+                    <h3 id="videoTitle" class="font-bold text-lg mb-2 text-gray-800 line-clamp-2"></h3>
+                    <p id="videoInfo" class="text-sm text-gray-600 mb-4"></p>
+                    
+                    <!-- Quality Selection -->
+                    <div class="mb-4">
+                        <label class="block text-xs text-gray-500 mb-1">Quality / Format</label>
+                        <select id="qualitySelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <option value="bestvideo[ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[ext=mp4]/best">Best Available (H.264/MP4) (Default)</option>
+                            <option value="bestvideo[height<=1080][ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best">1080p (H.264/MP4)</option>
+                            <option value="bestvideo[height<=720][ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best">720p (H.264/MP4)</option>
+                            <option value="bestvideo[height<=480][ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best">480p (H.264/MP4)</option>
+                            <option value="bestaudio[ext=m4a]/bestaudio/best">Audio Only (M4A/MP3)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <a id="downloadBtn" href="#" target="_blank" class="block w-full text-center bg-green-500 text-white py-2 rounded-lg font-medium hover:bg-green-600 transition">
+                            Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2 text-center">
+                Note: On mobile, tap "Download" then "Save to Files" or "Save Video".
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const clearBtn = document.getElementById('clearBtn');
+        const parseBtn = document.getElementById('parseBtn');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const resultSection = document.getElementById('resultSection');
+        const errorMessage = document.getElementById('errorMessage');
+        const thumbnail = document.getElementById('thumbnail');
+        const videoTitle = document.getElementById('videoTitle');
+        const videoInfo = document.getElementById('videoInfo');
+        const qualitySelect = document.getElementById('qualitySelect');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        // Advanced Options
+        const advancedToggle = document.getElementById('advancedToggle');
+        const advancedSection = document.getElementById('advancedSection');
+        const advancedIcon = document.getElementById('advancedIcon');
+        const cookieInput = document.getElementById('cookieInput');
+
+        advancedToggle.addEventListener('click', () => {
+            advancedSection.classList.toggle('hidden');
+            advancedIcon.classList.toggle('rotate-90');
+        });
+
+        // Toggle clear button
+        urlInput.addEventListener('input', () => {
+            if (urlInput.value) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+        });
+
+        // Clear input
+        clearBtn.addEventListener('click', () => {
+            urlInput.value = '';
+            clearBtn.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            urlInput.focus();
+        });
+
+        // Parse URL
+        parseBtn.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+            const cookie = cookieInput.value.trim();
+            if (!url) return;
+
+            // Reset UI
+            errorMessage.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            parseBtn.disabled = true;
+            parseBtn.querySelector('span').textContent = 'Parsing...';
+            loadingSpinner.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url, cookie: cookie }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to parse video');
+                }
+
+                const data = await response.json();
+                
+                // Update UI with result
+                thumbnail.src = data.thumbnail;
+                videoTitle.textContent = data.title;
+                videoInfo.textContent = `Duration: ${formatDuration(data.duration)} | Uploader: ${data.uploader}`;
+                
+                // Set initial download link
+                updateDownloadLink();
+                
+                resultSection.classList.remove('hidden');
+
+            } catch (error) {
+                errorMessage.textContent = error.message;
+                errorMessage.classList.remove('hidden');
+            } finally {
+                parseBtn.disabled = false;
+                parseBtn.querySelector('span').textContent = 'Parse Link';
+                loadingSpinner.classList.add('hidden');
+            }
+        });
+
+        // Update download link when quality changes
+        qualitySelect.addEventListener('change', updateDownloadLink);
+
+        function updateDownloadLink() {
+            const url = urlInput.value.trim();
+            const cookie = cookieInput.value.trim();
+            const format = qualitySelect.value;
+            
+            if (!url) return;
+
+            let downloadUrl = `/api/download?url=${encodeURIComponent(url)}&format_id=${encodeURIComponent(format)}`;
+            if (cookie) {
+                downloadUrl += `&cookie=${encodeURIComponent(cookie)}`;
+            }
+            downloadBtn.href = downloadUrl;
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds) return 'Unknown';
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>
